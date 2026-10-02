@@ -1,8 +1,8 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, g
+from flask import Flask, render_template, request, redirect, url_for, flash
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
-from database import *
+from banco import tabela_time, tabela_jogador, tabela_partida
 from database import Jogador, Time, db_session, Partida
 
 app = Flask(__name__)
@@ -11,25 +11,23 @@ app.secret_key = "chave-secreta-interclasse-2026"
 
 @app.route("/")
 def dashboard():
-    # buscar todos os time no banco
-    # 1- montar o select
-    times_sql = select(Time)
-    # 2-executar o select
-    times = db_session.execute(times_sql).scalars().all()
+    times = tabela_time.select_todos()
+    jogadores = tabela_jogador.select_todos()
+    partidas = tabela_partida.select_todos()
 
-    nome = times
     return render_template(
         "dashboard.html",
-        total_jogadores=0,
+        total_jogadores=len(jogadores),
         total_times=len(times),
-        total_partidas=0,
+        total_partidas=len(partidas),
 
     )
 
 
 @app.route("/jogadores")
 def listar_jogadores():
-    return render_template("jogadores.html", jogadores=[], times=[])
+    jogadores = tabela_jogador.select_todos()
+    return render_template("jogadores.html", jogadores=jogadores)
 
 
 @app.route("/jogadores/novo", methods=["GET", "POST"])
@@ -41,44 +39,28 @@ def novo_jogador():
         time_id = request.form.get("time_id") or None
         if not nome:
             flash("Preencha o nome do jogador", "Error")
-            return render_template("jogadores.html")
+            return redirect(url_for("novo_jogador"))
         if not numero_camisa:
             flash("Preencha o numero da camisa do jogador", "Error")
-            return render_template("jogadores.html")
+            return redirect(url_for("novo_jogador"))
         if not posicao:
             flash("Preencha a posição do jogador", "Error")
-            return render_template("jogadores.html")
-        try:
-            jogadornovo = Jogador(nome=nome, numero_camisa=numero_camisa, posicao=posicao)
-            db_session.add(jogadornovo)
-            db_session.commit()
-            flash("jogador criado com sucesso", "success")
+            return redirect(url_for("novo_jogador"))
+        if not time_id:
+            flash("Preencha o time do jogador", "Error")
+            return redirect(url_for("novo_jogador"))
+        tabela_jogador.salvar(nome=nome, numero_camisa=numero_camisa, posicao=posicao, time_id=int(time_id))
+    times = tabela_time.select_todos()
+    jogadores = tabela_jogador.select_todos()
 
-        except SQLAlchemyError as e:
-            db_session.rollback()
-            print(e)
-            flash("Erro ao criar o jogador", "Error")
-
-        except Exception as e:
-            db_session.rollback()
-            flash("Erro inesperado", "Error")
-    # buscar todos os time no banco
-    # 1- montar o select
-    times_sql = select(Time)
-    # 2-executar o select
-    times = db_session.execute(times_sql).scalars().all()
-
-    return render_template("jogadores.html", jogadores=[], times=times)
+    return render_template("jogadores.html", jogadores=jogadores, times=times)
 
 
 @app.route("/times")
 def listar_times():
     # buscar todos os time no banco
     # 1- montar o select
-    times_sql = select(Time)
-    # 2-executar o select
-    times = db_session.execute(times_sql).scalars().all()
-    print(times)
+    times = tabela_time.select_todos()
     return render_template("times.html", times=times)
 
 
@@ -92,41 +74,25 @@ def novo_time():
         # 2-verificar se foi digitado
         if not nome:
             flash("Preencha o nome do time", "Error")
-            return render_template("times.html")
+            return redirect(url_for("novo_time"))
         if not responsavel:
             flash("Preencha o nome do responsavel pelo time", "Error")
-            return render_template("times.html")
+            return redirect(url_for("novo_time"))
         if not turma:
             flash("Preencha a turma do time", "Error")
-            return render_template("times.html")
+            return redirect(url_for("novo_time"))
         # 3-salvar no banco
-        try:
-            timenovo = Time(nome=nome, responsavel=responsavel, turma=turma)
-            db_session.add(timenovo)
-            db_session.commit()
-            flash("Time criado com sucesso", "success")
-
-        except SQLAlchemyError as e:
-            db_session.rollback()
-            print(e)
-            flash("Erro ao criar o time", "Error")
-
-        except Exception as e:
-            db_session.rollback()
-            flash("Erro inesperado", "Error")
-    # buscar todos os time no banco
-    # 1- montar o select
-    times_sql = select(Time)
-    # 2-executar o select
-    times = db_session.execute(times_sql).scalars().all()
-    print(times)
+        tabela_time.salvar(nome=nome, responsavel=responsavel, turma=turma)
+    times = tabela_time.select_todos()
 
     return render_template("times.html", times=times)
 
 
 @app.route("/partidas")
 def listar_partidas():
-    return render_template("partidas.html", partidas=[], times=[])
+    partidas = tabela_partida.select_todos()
+
+    return render_template("partidas.html", partidas=partidas)
 
 
 @app.route("/partidas/nova", methods=["GET", "POST"])
@@ -139,37 +105,28 @@ def nova_partida():
         data_partida = request.form.get("data_partida", "").strip()
         if not time_casa_id:
             flash("Preencha o time da casa", "Error")
-            return render_template("partidas.html")
+            return redirect(url_for("nova_partida"))
+        if time_visitante_id == time_casa_id:
+            flash("Cadastre times diferentes em uma partida", "Error")
+            return redirect(url_for("nova_partida"))
 
         if not time_visitante_id:
             flash("Preencha o nome do time visitante", "Error")
-            return render_template("partidas.html")
+            return redirect(url_for("nova_partida"))
         if not gols_casa:
             flash("Preencha os gols do time da casa", "Error")
-            return render_template("partidas.html")
+            return redirect(url_for("nova_partida"))
         if not gols_visitante:
             flash("Preencha os gols do time visitante", "Error")
-            return render_template("partidas.html")
+            return redirect(url_for("nova_partida"))
         if not data_partida:
             flash("Preencha a data da partida", "Error")
-            return render_template("partidas.html")
-        try:
-            partidanova = Partida(time_casa_id=int(time_casa_id), time_visitante_id=int(time_visitante_id),
-                                  gols_casa=gols_casa, gols_visitante=gols_visitante, data_partida=data_partida)
-            db_session.add(partidanova)
-            db_session.commit()
-            flash("Partida criada com sucesso", "success")
+            return redirect(url_for("nova_partida"))
+        tabela_partida.salvar(time_casa_id=int(time_casa_id), time_visitante_id=int(time_visitante_id), gols_casa=int(gols_casa), gols_visitante=int(gols_visitante),data_partida=data_partida)
+    times = tabela_time.select_todos()
+    partidas = tabela_partida.select_todos()
 
-        except SQLAlchemyError as e:
-            db_session.rollback()
-            print(e)
-            flash("Erro ao criar a partida", "Error")
-
-        except Exception as e:
-            db_session.rollback()
-            flash("Erro inesperado", "Error")
-
-    return render_template("partidas.html", partidas=[], times=[])
+    return render_template("partidas.html", partidas=partidas, times=times)
 
 
 if __name__ == "__main__":
