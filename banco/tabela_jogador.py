@@ -1,14 +1,21 @@
 from flask import flash
-from sqlalchemy import select
+from sqlalchemy import select,func
 from sqlalchemy.exc import SQLAlchemyError
 
 from database import Time, db_session, Jogador
 
 
 def select_todos():
-    jogadores_sql = select(Jogador)
-    jogadores = db_session.execute(jogadores_sql).scalars().all()
+    # join(tabela que eu quero juntar,condição= chave estrangeira igual chave primaria)
+    jogadores_sql = select(Jogador,Time).join(Time,Jogador.time_id == Time.id)
+    # usar scallars quando tiver somente uma tabela
+    jogadores = db_session.execute(jogadores_sql).all()
     return jogadores
+def select_quantidade_total():
+    jogadores_sql = select(func.count(Jogador.id))
+    qtd_total_jogadores = db_session.execute(jogadores_sql).scalar()
+
+    return qtd_total_jogadores
 def salvar(nome,numero_camisa,posicao,time_id):
     try:
         jogadornovo = Jogador(nome=nome, numero_camisa=int(numero_camisa), posicao=posicao, time_id=int(time_id))

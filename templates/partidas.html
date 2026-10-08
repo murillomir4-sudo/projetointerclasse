@@ -24,7 +24,7 @@
             <div class="campo">
                 <label for="time_casa_id">Time da Casa *</label>
                 <select id="time_casa_id" name="time_casa_id" >
-                {% for time in times %}
+                {% for time,jogadores in times %}
                 <option value="{{ time.id }}">{{time.nome}}</option>
                 {% endfor %}
                 </select>
@@ -32,22 +32,23 @@
             <div class="campo">
                 <label for="time_visitante_id">Time Visitante *</label>
                 <select id="time_visitante_id" name="time_visitante_id" >
-                {% for time in times %}
+                {% for time,jogadores in times %}
                 <option value="{{ time.id }}">{{time.nome}}</option>
                 {% endfor %}
                 </select>
             </div>
         </div>
         <div class="linha-campos">
-
             <div class="campo">
-                <label for="gols_visitante">gols Visitante</label>
+                <label for="gols_visitante">gols Casa</label>
                 <input type="number" id="gols_visitante" name="gols_visitante" min="0" value="0">
             </div>
+
             <div class="campo">
                 <label for="gols_casa">gols Visitante</label>
                 <input type="number" id="gols_casa" name="gols_casa" min="0" value="0">
             </div>
+
         </div>
         <div class="linha-campos">
             <div class="campo">
@@ -84,6 +85,7 @@
     <table>
         <thead>
         <tr>
+            <th>id</th>
             <th>id_casa</th>
             <th>id_visitante</th>
             <th>gols da casa</th>
@@ -92,10 +94,11 @@
         </tr>
         </thead>
         <tbody>
-        {% for partida in partidas %}
+        {% for partida,time_casa,time_visitante in partidas %}
         <tr>
-            <td>{{partida.time_casa_id}}</td>
-            <td>{{partida.time_visitante_id}}</td>
+            <td>{{partida.id}}</td>
+            <td>{{time_casa.nome}}</td>
+            <td>{{time_visitante.nome}}</td>
             <td>{{partida.gols_casa}}</td>
             <td>{{partida.gols_visitante}}</td>
             <td>{{partida.data_partida}}</td>
