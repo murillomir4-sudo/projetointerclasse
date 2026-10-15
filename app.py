@@ -71,6 +71,7 @@ def novo_time():
         nome = request.form.get("nome", "").strip()
         responsavel = request.form.get("responsavel", "").strip()
         turma = request.form.get("turma", "").strip()
+        jogadores_ids = request.form.getlist("jogadores")
         # 2-verificar se foi digitado
         if not nome:
             flash("Preencha o nome do time", "Error")
@@ -82,12 +83,25 @@ def novo_time():
             flash("Preencha a turma do time", "Error")
             return redirect(url_for("novo_time"))
         # 3-salvar no banco
-        tabela_time.salvar(nome=nome, responsavel=responsavel, turma=turma)
+        time =tabela_time.salvar(nome=nome, responsavel=responsavel, turma=turma)
+        if jogadores_ids:
+            for id_jogador in jogadores_ids:
+                jogador = tabela_jogador.select_um(id_jogador)
+                jogador.time_id = time.id
+                db_session.add(jogador)
+                db_session.commit()
+
+
     times = tabela_time.select_todos()
+    jogadores = tabela_jogador.select_todos()
+    return render_template("times.html", times=times,jogadores=jogadores)
 
-    return render_template("times.html", times=times)
-
-
+@app.route("/times/<id_time>")
+def detalhes_time(id_time):
+    jogadores= tabela_jogador.select_por_time(int(id_time)) #fazer uma função que traga todos os jogadores do time
+    time=tabela_time.select_um(int(id_time))
+    partidas=tabela_partida.select_por_time(int(id_time))
+    return render_template("time_detalhes.html",time=time,jogadores=jogadores,partidas=partidas,qtd_jogadores=len(jogadores),qtd_partidas=len(partidas))
 @app.route("/partidas")
 def listar_partidas():
     partidas = tabela_partida.select_todos()

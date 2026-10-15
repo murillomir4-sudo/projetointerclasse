@@ -25,6 +25,7 @@ def salvar(nome,turma,responsavel):
         db_session.add(timenovo)
         db_session.commit()
         flash("Time criado com sucesso", "success")
+        return timenovo
 
     except SQLAlchemyError as e:
         db_session.rollback()
@@ -35,3 +36,11 @@ def salvar(nome,turma,responsavel):
         db_session.rollback()
         flash("Erro inesperado", "Error")
         print(e)
+
+
+
+def select_um(id_time):
+    time_sql = select(Time).where(Time.id == id_time)
+    times = db_session.execute(time_sql).scalar_one_or_none()
+    return times
+print(select_um(1))
